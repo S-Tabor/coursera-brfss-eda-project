@@ -1,0 +1,445 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(scales)
+```
+
+### Load data
+
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+
+
+
+* * *
+## Part 1: Data
+
+**Sampling method and inference:**
+
+The BRFSS surveys are assigned via the random selection of an adult in the household. Therefore, since the gathered data has been randomly selected without any random assignment being used, we can only make generalisable inferences about the population. We cannot form any causal relationships based on this data.
+
+
+**Potential sources of bias:**
+
+Since the data is only gathered from people who live in US states, the population we can make inferences on is limited to the US population.
+
+As this data is gathered through telephone surveys, there are numerous sources of bias that could be present. These are:
+
+* **Non-response**:<BR> Since this survey asks the participants personal questions about their health (among other factors), some participants may feel uncomfortable or embarrassed disclosing such information and either provide no response or an untruthful value . This may be particular to certain types of health relate, and therefore lead to bias in the data with respect to to the true population.
+* **Convenience bias**:<BR> As only people with telephones and cell phones are included in the study, the data may not be representative of a, most likely small, but possibly important section of the population. 
+
+
+
+
+
+
+
+* * *
+## Part 2: Research questions
+
+
+
+**Research quesion 1:** Is there an association between people who smoke, or have who have smoked in the past, with having been diagnosed with cancer (other that skin cancer)?
+
+It is well known that smoking is a major contributor to lung cancer, but it is less well known (generally speaking) if smoking is associated with other types of cancer. Therefore, this research question may be of interest to people who smoke and would like to know if smoking can be associated with more types of cancer other than lung cancer. This may be of interest from a medical point of view as well. 
+
+The variables of interest for this particular research question, with their corresponding descriptions from the code book, are:
+
+* **"chcocncr"**:<BR> This is the response to the question "(Ever told) you had any other types of cancer?" (other than skin cancer). This is a categorical variable with two levels: 
+    * "Yes" 
+    * "No"<BR><BR>
+* **"\_smoker3"**:<BR> This is a calculated value for the computed smoking status. It is a categorical variable with four levels:
+    * "Current smoker - now smokes every day"
+    * "Current smoker - now smokes some days"
+    * "Former smoker"
+    * "Never smoked"
+
+
+
+<BR>
+**Research quesion 2:** For People classed as overweight or obese, is there an association between poor mental health and gender?
+
+In recent years, mental health has become much more widely spoken about topic as society has become more aware of the seriousness of mental health issues. It is, therefore, important that sources of poor mental health can be identified and prevented. If the data shows an association between mental health and gender for people with a high BMIs (possibly due to higher social pressures for one gender compared to the other), this information could better equip society for identifying and preventing factors that cause poor mental health. 
+
+
+The variables of interest for this particular research question, with their corresponding descriptions from the code book, are:
+
+* **"menthlth"**:<BR> This is a numeric variable of how many days, out of the past 30, the participants health has been "Not Good".
+
+* **"\_bmi5cat"**:<BR> This is the categorical variable for BMI level, it has four levels: 
+    * "Underweight" 
+    * "Normal weight"
+    * "Overweight"
+    * "Obese"<BR><BR>
+    
+    
+* **"sex"**:<BR> This is the categorical variable for gender, it has two levels: 
+    * "Male" 
+    * "Female"
+
+
+<BR><BR>
+**Research quesion 3:** For people aged over 65, is there an association between alcohol consumption and level of general health?
+
+This could be of interest to anyone who would like to know if a persons level of alcohol consumption affects their level of general health as they age i.e. do you have to drink less to stay healthy? Again, no causal links can be made, but an association (such as healthy older people appear to consume less alcohol) could be established.
+
+The variables of interest for this particular research question, with their corresponding descriptions from the code book, are:
+
+
+* **"genhlth"**:<BR> This is the categorical variable for general health, it has levels: 
+    * "Excellent" 
+    * "Very good"
+    * "Good"
+    * "Fair"
+    * "Poor"<BR><BR>
+
+* **"_age65yr"**:<BR> This is a categorical variable with two levels: 
+    * "Age 18 to 64"  
+    * "Age 65 or older"<BR><BR>
+    
+* **"avedrnk2"**:<BR> This is a numeric variable for the participant's average number of alcoholic drinks per day, in the last 30 days. 
+
+
+
+
+
+
+* * *
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button (green button with orange arrow) above. Make sure that your code is visible
+in the project you submit. Delete this note when before you submit your work.
+
+
+ 
+**Research quesion 1:**
+
+Immediately we can see that the variable "_smoker3" does not follow the  rules for naming variables in R (in this case it does not start with a letter). We can therefore search for this variable using:
+
+```{r}
+grep('smoker3', names(brfss2013), value = T)
+```
+
+Now knowing the correct name for the variable, it is possible to inspect the data:
+
+```{r}
+brfss2013 %>%
+  select(chcocncr, X_smoker3) %>%
+  summary()
+```
+
+From this output, we can see that there is a significant amount of NA entries for both variables. As including NA entries does not make sense with regard to the research question, we can filter them out:
+
+```{r}
+brfss2013 %>%
+  select(chcocncr, X_smoker3) %>% 
+  filter(!(is.na(chcocncr)), !(is.na(X_smoker3))) %>%
+  summary()
+```
+
+It is now possible to transform the X_smoker3 from four levels to two to better suit the research question. Therefore, from this variable, we will create a new variable in which has two levels: "smoker" and "Never smoked". In this instance, "smoker_yn" is short for someone who smokes or who has smoked in the past.
+
+
+
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!(is.na(X_smoker3))) %>%
+  mutate(smoker_yn = as.factor(ifelse(X_smoker3 == 
+                                      "Never smoked", 
+                                      "Never smoked", 
+                                      "smoker")))
+
+```
+
+
+Checking that this transformation has worked correctly:
+
+```{r}
+
+str(brfss2013$smoker_yn)
+
+```
+```{r}
+
+brfss2013 %>%
+  select(smoker_yn) %>%
+  summary()
+```
+
+Therefore, it can be clearly seen that that the variable "smoker_yn" is a factor with only two levels as desired. This data can know be visualised, which will highlight any possible problems with the research question and help clarify the next steps (i.e. performing a hypothesis test or further EDA).
+
+
+```{r}
+
+brfss2013 %>%
+  filter(!(is.na(chcocncr)), !(is.na(X_smoker3))) %>%
+  ggplot() + 
+  aes(x = chcocncr ,  group = smoker_yn) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat = "count") + 
+  geom_text(aes(label = scales::percent(..prop..), y = ..prop.. ), 
+            stat = "count", 
+            vjust = -.2) + 
+  facet_grid(~smoker_yn) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(title = "Smoking and Occurance of Cancer", 
+       x = "Diagnosed with Cancer", 
+       y = "Percentage of People") + 
+  guides(fill=FALSE) + 
+  theme_minimal() 
+
+```
+
+From this plot, a clear difference between incidences of cancer in non-smokers and people who have smoked can be seen. This would now be a good point to carry out a statistical test to see if this is a significant difference or not. For example, is this difference only due to smokers who have developed lung cancer, or is it a large enough difference to signify that other cancers may be involved?
+
+
+
+
+
+
+
+
+<BR><BR>
+**Research quesion 2:**
+
+Again, we can see "_bmi5cat" does not follow the rules for naming in R. Therefore, as before, we can find the correct name using: 
+
+```{r}
+grep('_bmi5cat', names(brfss2013), value = T)
+```
+
+We can now use this to look at the summary statistics of the variables of interest:
+
+```{r}
+  
+brfss2013 %>%
+  select(menthlth, X_bmi5cat, sex) %>%
+  summary()
+
+```
+
+For this research question, one of the variables we are looking at, "menthlth", is a numeric variable. From the summary statistics of this variable, the difference between the median and the mean indicate, at least, some level of right skew present in this distribution. We can therefore visualise this variable using a histogram while also filtering out NA values as these are not of interest with regard to the research question:
+
+
+```{r, warning=FALSE}
+
+brfss2013 %>%
+  filter(!is.na(menthlth)) %>%
+  ggplot() + 
+  aes(x= menthlth) + 
+  geom_histogram(binwidth = 2, color = "gray", fill = "darkblue") + 
+  labs(y = "Number of people", 
+       x = " 'Number Of Days Mental Health Not Good' ", 
+       title = "Histogram of Poor Mental Health Days Per Month") +
+  theme_minimal() 
+```
+
+From this plot, we can see that there is a very large number of responses corresponding to "0 days" with regard to the "menthlth" variable. We can see exactly what proportion using a table:
+
+```{r}
+prop.table(table(brfss2013$menthlth == 0))
+```
+
+Therefore, we can see almost 70% of respondents have answered this question with "0 days". Since the research question is interested in people with depression of some degree, this group of results can be excluded in our analysis. Investigating this variable once again after excluding "0 days" values:
+
+
+```{r}
+
+brfss2013 %>%
+  filter(!is.na(menthlth) & menthlth > 0) %>%
+  ggplot() + 
+  aes(x = menthlth) +
+  geom_histogram(binwidth = 1, color = "gray", fill = "darkblue") + 
+  labs(y = "Number of people", 
+       x = " 'Number Of Days Mental Health Not Good' ", 
+       title = "Histogram of People with One or More Poor Mental Health Days Per Month") + 
+  theme_minimal() 
+
+```
+
+
+```{r}
+
+brfss2013 %>%
+  select(menthlth) %>%
+  filter(!is.na(menthlth) & menthlth > 0) %>%
+  summary()
+
+```
+
+Now that we have filtered out the correct data for our research question, we can see that this data is moderately right skewed with a large peak at "30 days", indicating a possible bi-modal distribution. This may affect what tests we can carry out on the data, and should be kept in mind when carrying out any statistical analysis. We can also see that the median and mean have increased from their previous values to 5 and 10.93 days respectively.
+
+In order to fulfill the research question, we also need to convert the levels "Overweight" and "Obese" of the "X_bmi5cat" variable into one level:
+
+```{r}
+
+brfss2013 <- brfss2013 %>%
+  mutate(high_bmi = as.factor(ifelse((X_bmi5cat == "Overweight" | 
+                                      X_bmi5cat == "Obese") & 
+                                      (!is.na(X_bmi5cat)), 
+                                     "Overweight or Obese", 
+                                     "ok_bmi")))
+
+```
+
+Having done this, we are no ready to visualise all three variable, again filtering out any unwanted NA values:
+
+```{r}
+brfss2013 %>%
+  filter(!is.na(menthlth) & menthlth > 0 & !is.na(sex) & 
+         (high_bmi == "Overweight or Obese")) %>%
+  ggplot() + 
+  geom_boxplot(aes(x =high_bmi, y =menthlth, fill = sex)) + 
+  labs(title = "Boxplot of No. Poor Mental Health Days Per Month Vs BMI by Gender", 
+       x = "BMI Category", 
+       y = "No. Poor Mental Health Days Per Month") + 
+  theme_bw() 
+```
+```{r}
+# Summary stats for sex == "Females"
+brfss2013 %>%
+  select(menthlth, high_bmi, sex) %>%
+  filter(!is.na(menthlth) & menthlth > 0 & !is.na(high_bmi)  & !is.na(sex) & 
+         (high_bmi == "Overweight or Obese") & sex == "Female") %>%
+  summary()
+
+
+# Summary stats for sex == Males"
+brfss2013 %>%
+  select(menthlth, high_bmi, sex) %>%
+  filter(!is.na(menthlth) & menthlth > 0 & !is.na(high_bmi)  & !is.na(sex) & 
+         (high_bmi == "Overweight or Obese") & sex == "Male") %>%
+  summary()
+```
+
+Therefore, from the above box plot and summary statistics, we observe a difference between genders for the mean and median values (0.64 and 2 days respectively) for the number of poor health days per month for people classed as overweight or obese according to their BMI category. The next step from here would be to carry out some statistical tests to determine whether or not this difference shows an association between gender and number of poor mental health days for people classed as overweight or obese or not. The implications of such a test could indicate that women, in general, face a greater social pressure with regard to body image compared to men. It is again worth noting, however, that no causal relationship can be drawn from this test as it is only an observational study.
+
+
+
+
+
+**Research quesion 3:**
+
+
+After finding the correct variable names, we will first of all take a look at the summary statistics for the variables of interest regarding this research question:
+
+```{r}
+
+grep("age65", names(brfss2013), value = T)
+
+
+```
+
+```{r}
+brfss2013 %>%
+  select(genhlth, X_age65yr, avedrnk2) %>%
+  summary()
+
+```
+
+
+The most noticeable thing from these results is the very high number of NA entries for the "avedrnk2" variable. As this research question aims to look at the affect of alcohol consumption, these records are not useful and will be excluded from the analysis. 
+
+
+
+```{r}
+brfss2013 %>%
+  filter(!is.na(avedrnk2)) %>%
+  ggplot() + 
+  aes(x = avedrnk2) + 
+  geom_histogram(binwidth = 1, color = "gray", fill = "darkblue") 
+```
+
+
+```{r}
+
+brfss2013 %>%
+  select(avedrnk2) %>%
+  filter(!is.na(avedrnk2)) %>%
+  summary()
+
+
+```
+
+
+Therefore, from the above histogram and summary statistics, the variable "avedrnk2" can be seen to be very strongly right skewed. With a maximum value of 76 compared to a mean of 2 for the  average number of alcoholic drinks per day, in the last 30 days, it is highly likely that this skew is due to outliers.
+
+```{r}
+
+brfss2013 %>%
+  select(avedrnk2) %>%
+  filter(!is.na(avedrnk2)) %>%
+  summarise(mean_drink = mean(avedrnk2), sd_drink = sd(avedrnk2))
+
+```
+
+Since outliers are not a good indicator of a populations' behavior, and that the close to 0 the data looks to be nearly normal, it seems sensible to limit exclude the outliers in this case. We can do this by using the 99.7% of results within three standard deviations rule of thumb. This, therefore, would give a new maximum value of approximately 9 (2.2 + 3*2.3) of alcoholic drinks per day, on average, in the last 30 days. 
+
+
+```{r}
+prop.table(table(brfss2013$avedrnk2<10))
+```
+
+The above check shows that this new range still includes over 98% of the original data points.
+
+
+We can now visualise the data via a box plot. 
+
+
+```{r}
+
+brfss2013 %>%
+  filter(!is.na(X_age65yr), !is.na(avedrnk2), !is.na(genhlth), avedrnk2 < 10) %>%
+  ggplot()  + 
+  geom_boxplot(aes(x = genhlth, y =avedrnk2, fill = genhlth  )) + 
+  labs(title = "Boxplot of Alcohol Consumption and General Health by Age Group ", 
+       x = "Level of General Health", 
+       y = "Ave. No. Drinks/Day in the Last 30 Days") + 
+  scale_fill_discrete(name = "Age Group")  + 
+  theme_bw() + 
+  facet_grid(~X_age65yr)
+
+```
+
+
+```{r}
+
+# Under 65
+brfss2013 %>%
+  select(avedrnk2, X_age65yr, genhlth) %>%
+  filter(!is.na(X_age65yr), !is.na(avedrnk2), !is.na(genhlth), avedrnk2 < 10, 
+         genhlth == "Excellent", X_age65yr =="Age 18 to 64") %>%
+  summary()
+
+# Over 65
+brfss2013 %>%
+  select(avedrnk2, X_age65yr, genhlth) %>%
+  filter(!is.na(X_age65yr), !is.na(avedrnk2), !is.na(genhlth), avedrnk2 < 10, 
+         genhlth == "Excellent", X_age65yr =="Age 65 or older") %>%
+  summary()
+
+```
+
+
+Therefore, from this box plot and the following summary statistics, we can that there is a consistent difference in alcohol consumption and age group, but not much variation of alcohol consumption depending on the level of general health. This is useful to know in case some other research questions address this dependence, as it is probably the case that comparing between general health levels in this case would not yield anything of much significance. Comparing between age groups however, we can see a mean difference of approximately 0.5 units of alcohol per day on average in the last 30 days. Therefore, the difference in these means can be statistically tested for significance. 
+
+
+
